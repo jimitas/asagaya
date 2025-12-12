@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ひらやすみ 聖地巡礼マップ - 阿佐ヶ谷</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Shippori+Mincho:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --warm-cream: #FDF8F3;
+            --soft-brown: #8B7355;
+            --deep-brown: #5C4033;
+            --accent-orange: #E8A87C;
+            --accent-green: #7CB87C;
+            --light-green: #C5E0B4;
+            --shadow: rgba(92, 64, 51, 0.15);
+            --card-bg: rgba(253, 248, 243, 0.95);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background: var(--warm-cream);
+            color: var(--deep-brown);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--soft-brown) 0%, var(--deep-brown) 100%);
+            padding: 1.5rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L35 15 L30 25 L25 15 Z' fill='%23ffffff' fill-opacity='0.05'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .house-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--accent-orange);
+            border-radius: 8px 8px 0 0;
+            position: relative;
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .house-icon::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 35px solid transparent;
+            border-right: 35px solid transparent;
+            border-bottom: 25px solid var(--accent-orange);
+        }
+
+        .house-icon::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 18px;
+            height: 25px;
+            background: var(--deep-brown);
+            border-radius: 3px 3px 0 0;
+        }
+
+        h1 {
+            font-family: 'Shippori Mincho', serif;
+            font-size: 2rem;
+            color: var(--warm-cream);
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        h1 span {
+            display: block;
+            font-size: 0.9rem;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-weight: 400;
+            letter-spacing: 0.2em;
+            margin-top: 0.3rem;
+            opacity: 0.9;
+        }
+
+        /* Main Layout */
+        main {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            height: calc(100vh - 100px);
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 0;
+        }
+
+        /* Map Container */
+        .map-container {
+            position: relative;
+            background: #e8e0d5;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 30px var(--shadow);
+            border: 2px solid var(--accent-orange);
+        }
+
+        .leaflet-popup-content {
+            margin: 12px 16px;
+            font-family: 'Zen Maru Gothic', sans-serif;
+        }
+
+        .leaflet-popup-tip {
+            background: var(--card-bg);
+            border: 2px solid var(--accent-orange);
+            border-top: none;
+            border-left: none;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(180deg, var(--warm-cream) 0%, #F5EDE3 100%);
+            border-left: 3px solid var(--accent-orange);
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .sidebar-title {
+            font-family: 'Shippori Mincho', serif;
+            font-size: 1.3rem;
+            color: var(--deep-brown);
+            margin-bottom: 1rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px dashed var(--accent-orange);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sidebar-title::before {
+            content: '📍';
+            font-size: 1.2rem;
+        }
+
+        /* Spot Cards */
+        .spot-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 3px 15px var(--shadow);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .spot-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, transparent 50%, var(--light-green) 50%);
+            opacity: 0.3;
+            transition: opacity 0.3s ease;
+        }
+
+        .spot-card:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 6px 25px var(--shadow);
+            border-left-color: var(--accent-orange);
+        }
+
+        .spot-card:hover::before {
+            opacity: 0.5;
+        }
+
+        .spot-card.active {
+            border-left-color: var(--accent-green);
+            background: linear-gradient(135deg, white 0%, var(--light-green) 100%);
+        }
+
+        .spot-number {
+            position: absolute;
+            top: 0.8rem;
+            right: 0.8rem;
+            width: 28px;
+            height: 28px;
+            background: var(--accent-orange);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            z-index: 1;
+        }
+
+        .spot-name {
+            font-family: 'Shippori Mincho', serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--deep-brown);
+            margin-bottom: 0.4rem;
+            padding-right: 2rem;
+        }
+
+        .spot-category {
+            display: inline-block;
+            font-size: 0.7rem;
+            background: var(--accent-green);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            margin-bottom: 0.5rem;
+        }
+
+        .spot-description {
+            font-size: 0.85rem;
+            color: var(--soft-brown);
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .spot-address {
+            font-size: 0.75rem;
+            color: #999;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .spot-address::before {
+            content: '📮';
+            font-size: 0.7rem;
+        }
+
+        /* Legend */
+        .legend {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            box-shadow: 0 3px 15px var(--shadow);
+        }
+
+        .legend-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+            color: var(--deep-brown);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .legend-marker {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+
+        .legend-marker.main { background: #E74C3C; }
+        .legend-marker.food { background: #F39C12; }
+        .legend-marker.shop { background: #3498DB; }
+        .legend-marker.spot { background: #27AE60; }
+
+        /* Route Button */
+        .route-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-orange) 0%, #D4936A 100%);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(232, 168, 124, 0.4);
+        }
+
+        .route-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(232, 168, 124, 0.5);
+        }
+
+        .route-btn::before {
+            content: '🚶 ';
+        }
+
+        /* Custom Marker */
+        .custom-marker {
+            background: white;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            border: 3px solid var(--accent-orange);
+            transition: transform 0.2s ease;
+        }
+
+        .custom-marker:hover {
+            transform: scale(1.2);
+        }
+
+        /* Info Panel */
+        .info-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 3px 15px var(--shadow);
+            border: 2px dashed var(--light-green);
+        }
+
+        .info-panel p {
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--soft-brown);
+        }
+
+        .info-panel strong {
+            color: var(--deep-brown);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+                grid-template-rows: 50vh auto;
+                height: auto;
+            }
+
+            .sidebar {
+                border-left: none;
+                border-top: 3px solid var(--accent-orange);
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .spot-card {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .spot-card:nth-child(1) { animation-delay: 0.1s; }
+        .spot-card:nth-child(2) { animation-delay: 0.15s; }
+        .spot-card:nth-child(3) { animation-delay: 0.2s; }
+        .spot-card:nth-child(4) { animation-delay: 0.25s; }
+        .spot-card:nth-child(5) { animation-delay: 0.3s; }
+        .spot-card:nth-child(6) { animation-delay: 0.35s; }
+        .spot-card:nth-child(7) { animation-delay: 0.4s; }
+        .spot-card:nth-child(8) { animation-delay: 0.45s; }
+        .spot-card:nth-child(9) { animation-delay: 0.5s; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="house-icon"></div>
+            <h1>
+                ひらやすみ 聖地巡礼マップ
+                <span>阿佐ヶ谷周辺ロケ地ガイド</span>
+            </h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <aside class="sidebar">
+            <div class="info-panel">
+                <p>
+                    <strong>『ひらやすみ』</strong>は真造圭伍さんによる漫画作品。
+                    29歳フリーターのヒロトが阿佐ヶ谷の平屋で従妹のなつみと暮らす日常を描きます。
+                    2025年にNHK夜ドラとしてドラマ化されました。
+                </p>
+            </div>
+
+            <h2 class="sidebar-title">聖地スポット一覧</h2>
+
+            <div id="spot-list"></div>
+
+            <div class="legend">
+                <div class="legend-title">カテゴリ凡例</div>
+                <div class="legend-item">
+                    <div class="legend-marker main">🏠</div>
+                    <span>メインスポット</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker food">🍴</div>
+                    <span>飲食店</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker shop">📚</div>
+                    <span>お店・施設</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker spot">📍</div>
+                    <span>ロケ地</span>
+                </div>
+            </div>
+
+            <button class="route-btn" onclick="openGoogleMapsRoute()">
+                おすすめルートを開く
+            </button>
+        </aside>
+    </main>
+
+    <script>
+        // 聖地スポットデータ
+        const spots = [
+            {
+                id: 1,
+                name: "JR阿佐ヶ谷駅",
+                category: "main",
+                categoryName: "メインスポット",
+                icon: "🚉",
+                lat: 35.7047,
+                lng: 139.6357,
+                description: "物語の中心となる阿佐ヶ谷駅。ヒロトとなつみが待ち合わせをしたロータリーなど、様々なシーンで登場します。",
+                address: "東京都杉並区阿佐谷南3-36-1"
+            },
+            {
+                id: 2,
+                name: "釣り堀 寿々木園",
+                category: "main",
+                categoryName: "メインスポット",
+                icon: "🎣",
+                lat: 35.7022,
+                lng: 139.6365,
+                description: "ヒロトのバイト先「金松」のモデル。大正12年創業の老舗釣り堀で、金魚と鯉釣りが楽しめます。駅から徒歩3分。",
+                address: "東京都杉並区阿佐谷南3-38-33"
+            },
+            {
+                id: 3,
+                name: "わいたこ いちばん店",
+                category: "food",
+                categoryName: "飲食店",
+                icon: "🐙",
+                lat: 35.7053,
+                lng: 139.6363,
+                description: "ヒロトがたこ焼きを買うシーンで登場。阿佐ヶ谷駅北口すぐのガード下にある人気たこ焼き店。",
+                address: "東京都杉並区阿佐谷北1-3-2"
+            },
+            {
+                id: 4,
+                name: "阿佐谷パールセンター",
+                category: "spot",
+                categoryName: "ロケ地",
+                icon: "🏮",
+                lat: 35.7035,
+                lng: 139.6355,
+                description: "阿佐谷七夕まつりの舞台となるアーケード商店街。約700mの通りに200以上の店舗が軒を連ねます。",
+                address: "東京都杉並区阿佐谷南1丁目"
+            },
+            {
+                id: 5,
+                name: "杉山商事（ニコニコ不動産）",
+                category: "shop",
+                categoryName: "お店・施設",
+                icon: "🏢",
+                lat: 35.7042,
+                lng: 139.6352,
+                description: "よもぎさんが働く「ニコニコ不動産」のロケ地。パールセンター入口にある実在の不動産会社。",
+                address: "東京都杉並区阿佐谷南3丁目"
+            },
+            {
+                id: 6,
+                name: "阿佐谷北1丁目歩道橋",
+                category: "spot",
+                categoryName: "ロケ地",
+                icon: "🌉",
+                lat: 35.7082,
+                lng: 139.6357,
+                description: "ヒロトとなつみが買い物帰りに立ち寄る歩道橋。「眺めいいよ」と誘うシーンが印象的。中杉通り沿い。",
+                address: "東京都杉並区阿佐谷北1丁目"
+            },
+            {
+                id: 7,
+                name: "カフェ・ド・ウィング",
+                category: "food",
+                categoryName: "飲食店",
+                icon: "☕",
+                lat: 35.7043,
+                lng: 139.6362,
+                description: "よもぎさんと小説家・石川が会話するシーンの舞台。駅南口ビル2階にある昔ながらの純喫茶。",
+                address: "東京都杉並区阿佐谷南3丁目"
+            },
+            {
+                id: 8,
+                name: "古書コンコ堂",
+                category: "shop",
+                categoryName: "お店・施設",
+                icon: "📚",
+                lat: 35.7078,
+                lng: 139.6355,
+                description: "作中に何度も登場する古本屋。松山通りにあり、美術・音楽・歴史の本が充実しています。",
+                address: "東京都杉並区阿佐谷北2丁目"
+            },
+            {
+                id: 9,
+                name: "天徳泉（銭湯）",
+                category: "shop",
+                categoryName: "お店・施設",
+                icon: "♨️",
+                lat: 35.7065,
+                lng: 139.6340,
+                description: "阿佐ヶ谷の温かい雰囲気を感じられる銭湯。公式聖地巡礼マップも配布中。",
+                address: "東京都杉並区阿佐谷北1-13-7"
+            },
+            {
+                id: 10,
+                name: "とらや椿山",
+                category: "food",
+                categoryName: "飲食店",
+                icon: "🍡",
+                lat: 35.7028,
+                lng: 139.6355,
+                description: "大正14年創業の老舗和菓子店。七夕まつりのシーンでなつみとあかりが歩く背景に登場。",
+                address: "東京都杉並区阿佐谷南1丁目"
+            },
+            {
+                id: 11,
+                name: "八幡煎餅",
+                category: "food",
+                categoryName: "飲食店",
+                icon: "🍘",
+                lat: 35.7095,
+                lng: 139.6355,
+                description: "80年以上営業を続ける老舗煎餅屋。なつみと中島さんが通りかかるシーンで登場。",
+                address: "東京都杉並区阿佐谷北3丁目"
+            }
+        ];
+
+        // マップ初期化
+        const map = L.map('map').setView([35.7047, 139.6357], 16);
+
+        // OpenStreetMapタイル
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // マーカーを格納
+        const markers = {};
+
+        // カテゴリ別の色
+        const categoryColors = {
+            main: '#E74C3C',
+            food: '#F39C12',
+            shop: '#3498DB',
+            spot: '#27AE60'
+        };
+
+        // カスタムアイコン作成
+        function createCustomIcon(spot) {
+            return L.divIcon({
+                className: 'custom-marker-wrapper',
+                html: `<div class="custom-marker" style="border-color: ${categoryColors[spot.category]}">${spot.icon}</div>`,
+                iconSize: [36, 36],
+                iconAnchor: [18, 18],
+                popupAnchor: [0, -20]
+            });
+        }
+
+        // マーカー追加
+        spots.forEach(spot => {
+            const marker = L.marker([spot.lat, spot.lng], {
+                icon: createCustomIcon(spot)
+            }).addTo(map);
+
+            marker.bindPopup(`
+                <div style="min-width: 200px;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">${spot.icon}</div>
+                    <div style="font-family: 'Shippori Mincho', serif; font-size: 1.1rem; font-weight: 600; color: #5C4033; margin-bottom: 0.3rem;">${spot.name}</div>
+                    <div style="font-size: 0.7rem; background: ${categoryColors[spot.category]}; color: white; display: inline-block; padding: 0.15rem 0.5rem; border-radius: 10px; margin-bottom: 0.5rem;">${spot.categoryName}</div>
+                    <div style="font-size: 0.85rem; color: #8B7355; line-height: 1.5;">${spot.description}</div>
+                </div>
+            `);
+
+            markers[spot.id] = marker;
+        });
+
+        // サイドバーにスポットカード追加
+        const spotList = document.getElementById('spot-list');
+        spots.forEach(spot => {
+            const card = document.createElement('div');
+            card.className = 'spot-card';
+            card.innerHTML = `
+                <span class="spot-number">${spot.id}</span>
+                <div class="spot-category" style="background: ${categoryColors[spot.category]}">${spot.categoryName}</div>
+                <div class="spot-name">${spot.icon} ${spot.name}</div>
+                <div class="spot-description">${spot.description}</div>
+                <div class="spot-address">${spot.address}</div>
+            `;
+
+            card.addEventListener('click', () => {
+                // マップを移動
+                map.setView([spot.lat, spot.lng], 17);
+                markers[spot.id].openPopup();
+
+                // アクティブ状態を更新
+                document.querySelectorAll('.spot-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+            });
+
+            spotList.appendChild(card);
+        });
+
+        // Googleマップでルートを開く
+        function openGoogleMapsRoute() {
+            const waypoints = spots.slice(0, 5).map(s => `${s.lat},${s.lng}`).join('/');
+            const url = `https://www.google.com/maps/dir/${waypoints}`;
+            window.open(url, '_blank');
+        }
+    </script>
+</body>
+</html>
